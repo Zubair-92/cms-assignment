@@ -96,6 +96,29 @@ class PageController extends Controller
         return api_response(true, 'Page details fetched successfully.', $page);
     }
 
+    #[OA\Get(
+        path: "/pages/slug/{slug}",
+        summary: "Get page details by URL slug for public viewing",
+        tags: ["Pages"],
+        parameters: [
+            new OA\Parameter(name: "slug", in: "path", required: true, schema: new OA\Schema(type: "string"))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Public page content retrieved successfully"),
+            new OA\Response(response: 404, description: "Page not found")
+        ]
+    )]
+    public function showBySlug($slug)
+    {
+        $page = Page::where('slug', $slug)->first();
+
+        if (!$page) {
+            return api_response(false, 'Page not found.', null, 404);
+        }
+
+        return api_response(true, 'Page details retrieved successfully.', $page);
+    }
+
     #[OA\Put(
         path: "/pages/{id}",
         summary: "Update page",

@@ -286,6 +286,33 @@
                     }
                 ]
             }
+        },
+        "/pages/slug/{slug}": {
+            "get": {
+                "tags": [
+                    "Pages"
+                ],
+                "summary": "Get page details by URL slug for public viewing",
+                "operationId": "153f87dd43bc32e24722bd569b10bef1",
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Public page content retrieved successfully"
+                    },
+                    "404": {
+                        "description": "Page not found"
+                    }
+                }
+            }
         }
     },
     "components": {

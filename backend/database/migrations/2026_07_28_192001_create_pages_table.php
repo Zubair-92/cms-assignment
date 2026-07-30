@@ -13,10 +13,13 @@ return new class extends Migration
             $table->string('title');
             $table->string('slug')->unique();
             $table->longText('content');
+            $table->string('cover_image')->nullable();
             $table->enum('status', ['draft', 'published', 'archived'])->default('draft');
             $table->timestamp('published_at')->nullable();
+            $table->unsignedBigInteger('menu_id')->nullable();
             $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
-            $table->softDeletes(); // Requirements: Soft Deletes enabled
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

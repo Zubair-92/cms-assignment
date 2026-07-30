@@ -14,9 +14,12 @@ class Page extends Model
         'title',
         'slug',
         'content',
+        'cover_image',
         'status',
         'published_at',
+        'menu_id',
         'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
@@ -32,10 +35,18 @@ class Page extends Model
     }
 
     /**
-     * Linked menu items
+     * User who last updated the page (Audit requirement)
      */
-    public function menus()
+    public function updater()
     {
-        return $this->hasMany(Menu::class);
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    /**
+     * Linked menu item
+     */
+    public function menu()
+    {
+        return $this->belongsTo(Menu::class);
     }
 }

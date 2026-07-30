@@ -8,75 +8,114 @@ use Illuminate\Http\Request;
 class MenuController extends Controller
 {
     /**
-     * Fetch tree structure of top-level menus with nested children
+     * Display a listing of all menu items flat or with parent relationship.
      */
     public function index()
     {
-        $menus = Menu::whereNull('parent_id')
-            ->with(['childrenRecursive', 'page:id,title,slug'])
-            ->orderBy('order', 'asc')
-            ->get();
-
-        return api_response(true, 'Menu structure retrieved successfully.', $menus);
+        $menus = Menu::orderBy('order', 'asc')->get();
+        return response()->json($menus);
     }
 
     /**
-     * Create menu item
+     * Display the dynamic recursive tree structure with nested ordering.
+     */
+    public function tree()
+    {
+        $withRecursiveChildren = function ($query) use (&$withRecursiveChildren) {
+            $query->orderBy('order', 'asc')->with(['children' => $withRecursiveChildren]);
+        };
+
+        $tree = Menu::whereNull('parent_id')
+                    ->orderBy('order', 'asc')
+                    ->with(['children' => $withRecursiveChildren])
+                    ->get();
+
+        return response()->json($tree);
+    }
+
+    /**
+     * Store a newly created menu item or submenu item.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'title'     => 'required|string|max:255',
-            'url'       => 'nullable|string',
-            'page_id'   => 'nullable|exists:pages,id',
+            'url'       => 'required|string|max:255',
             'parent_id' => 'nullable|exists:menus,id',
             'order'     => 'nullable|integer',
-            'is_active' => 'nullable|boolean',
         ]);
+
+        $parentId = $request->filled('parent_id') ? $request->parent_id : null;
+        $validated['parent_id'] = $parentId;
+
+        if (!isset($validated['order'])) {
+            $maxOrder = Menu::where('parent_id', $parentId)->max('order');
+            $validated['order'] = is_null($maxOrder) ? 0 : $maxOrder + 1;
+        }
 
         $menu = Menu::create($validated);
 
-        return api_response(true, 'Menu item created successfully.', $menu, 201);
+        return response()->json($menu, 201);
     }
 
     /**
-     * Update menu item
+     * Display the specified menu item.
+     */
+    public function show($id)
+    {
+        $menu = Menu::findOrFail($id);
+        return response()->json($menu);
+    }
+
+    /**
+     * Update the specified menu item in storage.
      */
     public function update(Request $request, $id)
     {
-        $menu = Menu::find($id);
-
-        if (!$menu) {
-            return api_response(false, 'Menu item not found.', null, 404);
-        }
+        $menu = Menu::findOrFail($id);
 
         $validated = $request->validate([
             'title'     => 'sometimes|required|string|max:255',
-            'url'       => 'nullable|string',
-            'page_id'   => 'nullable|exists:pages,id',
+            'url'       => 'sometimes|required|string|max:255',
             'parent_id' => 'nullable|exists:menus,id',
             'order'     => 'nullable|integer',
-            'is_active' => 'nullable|boolean',
         ]);
+
+        if ($request->has('parent_id')) {
+            $validated['parent_id'] = $request->filled('parent_id') ? $request->parent_id : null;
+        }
 
         $menu->update($validated);
 
-        return api_response(true, 'Menu item updated successfully.', $menu);
+        return response()->json($menu);
     }
 
     /**
-     * Delete menu item
+     * Bulk update order positions for siblings.
+     */
+    public function reorder(Request $request)
+    {
+        $validated = $request->validate([
+            'items'         => 'required|array',
+            'items.*.id'    => 'required|exists:menus,id',
+            'items.*.order' => 'required|integer',
+        ]);
+
+        foreach ($validated['items'] as $item) {
+            Menu::where('id', $item['id'])->update(['order' => $item['order']]);
+        }
+
+        return response()->json(['message' => 'Menu order updated successfully.']);
+    }
+
+    /**
+     * Remove the specified menu item along with nested items.
      */
     public function destroy($id)
     {
-        $menu = Menu::find($id);
-
-        if (!$menu) {
-            return api_response(false, 'Menu item not found.', null, 404);
-        }
-
+        $menu = Menu::findOrFail($id);
         $menu->delete();
 
-        return api_response(true, 'Menu item deleted successfully.');
+        return response()->json(['message' => 'Menu item deleted successfully.']);
     }
 }
